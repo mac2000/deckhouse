@@ -15,13 +15,13 @@ type checker interface {
 }
 
 type ControlPlaneNodesReadinessController struct {
-	kubeCl    *client.KubeClient
+	kubeCl    *client.KubernetesClient
 	addresses map[string]string
 
 	sourceCommandName string
 }
 
-func NewControlPlaneChecker(kubeCl *client.KubeClient, allAddresses map[string]string) *ControlPlaneNodesReadinessController {
+func NewControlPlaneChecker(kubeCl *client.KubernetesClient, allAddresses map[string]string) *ControlPlaneNodesReadinessController {
 	return &ControlPlaneNodesReadinessController{
 		addresses: allAddresses,
 		kubeCl:    kubeCl,
@@ -30,7 +30,6 @@ func NewControlPlaneChecker(kubeCl *client.KubeClient, allAddresses map[string]s
 
 func (c *ControlPlaneNodesReadinessController) WithSourceCommandName(name string) *ControlPlaneNodesReadinessController {
 	c.sourceCommandName = name
-
 	return c
 }
 
