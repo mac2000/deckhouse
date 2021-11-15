@@ -17,12 +17,14 @@ type KubeProxyChecker struct {
 	nsToCheck      string
 	logCheckResult bool
 	askPassword    bool
+	stopProxy      bool
 }
 
 func NewKubeProxyChecker(ip string) *KubeProxyChecker {
 	return &KubeProxyChecker{
 		ip:        ip,
 		nsToCheck: "kube-system",
+		stopProxy: true,
 	}
 }
 
@@ -38,6 +40,11 @@ func (c *KubeProxyChecker) WithLogResult(f bool) *KubeProxyChecker {
 
 func (c *KubeProxyChecker) WithAskPassword(f bool) *KubeProxyChecker {
 	c.askPassword = f
+	return c
+}
+
+func (c *KubeProxyChecker) WithStopProxy(f bool) *KubeProxyChecker {
+	c.stopProxy = f
 	return c
 }
 
@@ -75,6 +82,16 @@ func (c *KubeProxyChecker) IsReady() (bool, error) {
 
 	c.printNs(ns)
 
+	if c.stopProxy {
+		if kubeCl.KubeProxy != nil {
+			kubeCl.KubeProxy.Stop()
+		}
+
+		if kubeCl.SSHClient != nil {
+			kubeCl.SSHClient.Stop()
+		}
+	}
+
 	return true, nil
 }
 
@@ -93,5 +110,5 @@ func (c *KubeProxyChecker) printNs(ns *apiv1.Namespace) {
 		return
 	}
 
-	log.InfoF("Namespace %s info \n: %s\n", string(yamlRepr))
+	log.InfoF("Namespace '%s' info:\n%s\n", c.nsToCheck, string(yamlRepr))
 }
