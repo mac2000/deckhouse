@@ -15,11 +15,10 @@
 package session
 
 import (
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutils"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util"
 )
 
 func TestCreatingNewSShSession(t *testing.T) {
@@ -130,7 +129,7 @@ func TestSession_ChoiceNewHost(t *testing.T) {
 			ses.ChoiceNewHost()
 		}
 
-		remainedHosts := util.ExcludeElementFromSlice(availableHosts, ses.host)
+		remainedHosts := stringsutils.ExcludeElementFromSlice(availableHosts, ses.host)
 		var expectedRemainedHosts []string
 		expectedRemainedHosts = append(expectedRemainedHosts, remainedHosts...)
 

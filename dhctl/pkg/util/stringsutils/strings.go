@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package stringsutils
 
 import (
 	"crypto/sha256"
@@ -54,6 +54,30 @@ func ExcludeElementFromSlice(list []string, elem string) []string {
 	}
 
 	return list
+}
+
+func ExcludeKeys() {
+
+}
+
+func DifferenceSlices(first []string, second []string) []string {
+	res := make([]string, 0)
+
+	for _, f := range first {
+		exclude := false
+		for _, s := range second {
+			if f == s {
+				exclude = true
+				break
+			}
+		}
+
+		if !exclude {
+			res = append(res, f)
+		}
+	}
+
+	return res
 }
 
 func Sha256Encode(input string) string {

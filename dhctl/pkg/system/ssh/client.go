@@ -65,3 +65,11 @@ func (s *Client) UploadScript(scriptPath string, args ...string) *frontend.Uploa
 func (s *Client) Check() *frontend.Check {
 	return frontend.NewCheck(s.Settings)
 }
+
+// Stop stop client
+func (s *Client) Stop() {
+	if s.Agent != nil {
+		s.Agent.Stop()
+		s.Agent = nil
+	}
+}
