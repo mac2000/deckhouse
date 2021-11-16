@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/readiness/control_plane"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/readiness/terranode"
 	"sort"
 
 	"github.com/hashicorp/go-multierror"
@@ -48,6 +50,10 @@ const (
 )
 
 var ErrConvergeInterrupted = errors.New("Interrupted.")
+
+type nodeGroupReadinessChecker interface {
+	IsNodeGroupReady(excludeNodes ...string) (bool, error)
+}
 
 type Runner struct {
 	kubeCl         *client.KubernetesClient
@@ -110,6 +116,27 @@ func (r *Runner) isSkip(phase Phase) bool {
 
 func (r *Runner) RunConverge() error {
 	return r.lockRunner.Run(r.converge)
+}
+
+func (r *Runner) getNodeGroupReadinessChecker(metaConfig *config.MetaConfig, ngName string, nodeGroupState NodeGroupTerraformState) (nodeGroupReadinessChecker, error) {
+	if ngName != MasterNodeGroupName {
+		return terranode.NewChecker(), nil
+	}
+
+	hostnames := make(map[string]string)
+	for nodeName, st := range nodeGroupState.State {
+		r := terraform.NewRunnerFromConfig(metaConfig, "get-master-ip").
+			WithState(st)
+
+		out, err := terraform.GetMasterNodeResult(r)
+		if err != nil {
+			return nil, err
+		}
+
+		hostnames[nodeName] = out.MasterIPForSSH
+	}
+
+	return control_plane.NewChecker(r.kubeCl, hostnames), nil
 }
 
 func (r *Runner) converge() error {
@@ -177,7 +204,13 @@ func (r *Runner) converge() error {
 		controller.WithChangeSettings(r.changeSettings)
 		controller.WithExcludedNodes(r.excludedNodes)
 
-		if err := controller.Run(nodeGroupName, nodesState[nodeGroupName]); err != nil {
+		ngState := nodesState[nodeGroupName]
+		checker, err := r.getNodeGroupReadinessChecker(metaConfig, nodeGroupName, ngState)
+		if err != nil {
+			return err
+		}
+
+		if err := controller.Run(nodeGroupName, ngState, checker); err != nil {
 			return err
 		}
 	}
@@ -285,7 +318,7 @@ func (c *Controller) WithExcludedNodes(nodesMap map[string]bool) *Controller {
 	return c
 }
 
-func (c *Controller) Run(nodeGroupName string, nodeGroupState NodeGroupTerraformState) error {
+func (c *Controller) Run(nodeGroupName string, nodeGroupState NodeGroupTerraformState, ngChecker nodeGroupReadinessChecker) error {
 	replicas := getReplicasByNodeGroupName(c.config, nodeGroupName)
 	step := getStepByNodeGroupName(nodeGroupName)
 
