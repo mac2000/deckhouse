@@ -11,21 +11,19 @@ import (
 )
 
 type ManagerReadinessChecker struct {
-	hostName string
-	kubeCl   *client.KubernetesClient
+	kubeCl *client.KubernetesClient
 }
 
-func NewControlPlaneManagerReadinessChecker(hostName string, kubeCl *client.KubernetesClient) *ManagerReadinessChecker {
+func NewManagerReadinessChecker(kubeCl *client.KubernetesClient) *ManagerReadinessChecker {
 	return &ManagerReadinessChecker{
-		hostName: hostName,
-		kubeCl:   kubeCl,
+		kubeCl: kubeCl,
 	}
 }
 
-func (c *ManagerReadinessChecker) IsReady() (bool, error) {
+func (c *ManagerReadinessChecker) IsReady(nodeName, _ string) (bool, error) {
 	cpmPodsList, err := c.kubeCl.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "app=d8-control-plane-manager",
-		FieldSelector: fmt.Sprintf("spec.nodeName=%s", c.hostName),
+		FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName),
 	})
 
 	if err != nil {

@@ -56,30 +56,6 @@ func ExcludeElementFromSlice(list []string, elem string) []string {
 	return list
 }
 
-func ExcludeKeys() {
-
-}
-
-func DifferenceSlices(first []string, second []string) []string {
-	res := make([]string, 0)
-
-	for _, f := range first {
-		exclude := false
-		for _, s := range second {
-			if f == s {
-				exclude = true
-				break
-			}
-		}
-
-		if !exclude {
-			res = append(res, f)
-		}
-	}
-
-	return res
-}
-
 func Sha256Encode(input string) string {
 	hasher := sha256.New()
 

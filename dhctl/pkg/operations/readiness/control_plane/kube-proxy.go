@@ -12,7 +12,6 @@ import (
 )
 
 type KubeProxyChecker struct {
-	ip             string
 	initParams     *client.KubernetesInitParams
 	nsToCheck      string
 	logCheckResult bool
@@ -20,9 +19,8 @@ type KubeProxyChecker struct {
 	stopProxy      bool
 }
 
-func NewKubeProxyChecker(ip string) *KubeProxyChecker {
+func NewKubeProxyChecker() *KubeProxyChecker {
 	return &KubeProxyChecker{
-		ip:        ip,
 		nsToCheck: "kube-system",
 		stopProxy: true,
 	}
@@ -53,10 +51,10 @@ func (c *KubeProxyChecker) WithNamespaceToCheck(ns string) *KubeProxyChecker {
 	return c
 }
 
-func (c *KubeProxyChecker) IsReady() (bool, error) {
+func (c *KubeProxyChecker) IsReady(_, nodeExternalIp string) (bool, error) {
 	sshClient := ssh.NewClientFromFlags()
-	if c.ip != "" {
-		sshClient.Settings.SetAvailableHosts([]string{c.ip})
+	if nodeExternalIp != "" {
+		sshClient.Settings.SetAvailableHosts([]string{nodeExternalIp})
 	}
 
 	var err error

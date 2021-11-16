@@ -25,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/ready/control_plane"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/readiness/control_plane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -42,8 +42,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 			<-doneCh
 		})
 
-		// ip is empty because we have
-		checker := control_plane.NewKubeProxyChecker("").
+		checker := control_plane.NewKubeProxyChecker().
 			WithLogResult(true).
 			WithAskPassword(true).
 			WithInitParams(client.AppKubernetesInitParams())
@@ -54,7 +53,8 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 			<-ch
 		}
 
-		ready, err := checker.IsReady()
+		// ip is empty because we want check via ssh-hosts passed via cm args
+		ready, err := checker.IsReady("", "")
 		if err != nil {
 			proxyClose()
 			return err
