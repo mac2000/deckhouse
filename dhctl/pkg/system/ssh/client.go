@@ -16,10 +16,37 @@ package ssh
 
 import (
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 )
+
+var (
+	lock          = sync.Mutex{}
+	agentInstance *frontend.Agent
+)
+
+func initAgentInstance() (*frontend.Agent, error) {
+	lock.Lock()
+	defer lock.Unlock()
+
+	if agentInstance == nil {
+		inst := frontend.NewAgent(&session.AgentSettings{
+			PrivateKeys: app.SSHPrivateKeys,
+		})
+
+		err := inst.Start()
+		if err != nil {
+			return nil, err
+		}
+
+		agentInstance = inst
+	}
+
+	return agentInstance, nil
+}
 
 type Client struct {
 	Settings *session.Session
@@ -30,8 +57,15 @@ func (s *Client) Start() (*Client, error) {
 	if s.Settings == nil {
 		return nil, fmt.Errorf("possible bug in ssh client: session should be created before start")
 	}
-	s.Agent = frontend.NewAgent(s.Settings)
-	return s, s.Agent.Start()
+
+	a, err := initAgentInstance()
+	if err != nil {
+		return nil, err
+	}
+	s.Agent = a
+	s.Settings.AgentSettings = s.Agent.AgentSettings
+
+	return s, nil
 }
 
 // Easy access to frontends

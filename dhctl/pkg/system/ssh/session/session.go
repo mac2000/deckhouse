@@ -21,7 +21,6 @@ import (
 )
 
 type Input struct {
-	PrivateKeys    []string
 	User           string
 	Port           string
 	BastionHost    string
@@ -31,11 +30,31 @@ type Input struct {
 	AvailableHosts []string
 }
 
+type AgentSettings struct {
+	PrivateKeys []string
+
+	// runtime
+	AuthSock string
+}
+
+func (s *AgentSettings) AuthSockEnv() string {
+	if s.AuthSock != "" {
+		return fmt.Sprintf("SSH_AUTH_SOCK=%s", s.AuthSock)
+	}
+	return ""
+}
+
+func (s *AgentSettings) Clone() *AgentSettings {
+	return &AgentSettings{
+		AuthSock:    s.AuthSock,
+		PrivateKeys: append(make([]string, 0), s.PrivateKeys...),
+	}
+}
+
 // TODO rename to Settings
 // Session is used to store ssh settings
 type Session struct {
 	// input
-	PrivateKeys []string
 	User        string
 	Port        string
 	BastionHost string
@@ -43,8 +62,7 @@ type Session struct {
 	BastionUser string
 	ExtraArgs   string
 
-	// runtime
-	AuthSock string
+	AgentSettings *AgentSettings
 
 	lock           sync.RWMutex
 	host           string
@@ -54,7 +72,6 @@ type Session struct {
 
 func NewSession(input Input) *Session {
 	s := &Session{
-		PrivateKeys: input.PrivateKeys,
 		User:        input.User,
 		Port:        input.Port,
 		BastionHost: input.BastionHost,
@@ -112,16 +129,6 @@ func (s *Session) RemoteAddress() string {
 	return addr
 }
 
-func (s *Session) AuthSockEnv() string {
-	defer s.lock.RUnlock()
-	s.lock.RLock()
-
-	if s.AuthSock != "" {
-		return fmt.Sprintf("SSH_AUTH_SOCK=%s", s.AuthSock)
-	}
-	return ""
-}
-
 func (s *Session) String() string {
 	defer s.lock.RUnlock()
 	s.lock.RLock()
@@ -167,10 +174,11 @@ func (s *Session) Copy() *Session {
 	ses.BastionPort = s.BastionPort
 	ses.BastionUser = s.BastionUser
 	ses.ExtraArgs = s.ExtraArgs
-	ses.AuthSock = s.AuthSock
 	ses.host = s.host
 
-	ses.PrivateKeys = append(ses.PrivateKeys, s.PrivateKeys...)
+	if s.AgentSettings != nil {
+		ses.AgentSettings = s.AgentSettings.Clone()
+	}
 
 	ses.availableHosts = make([]string, len(s.availableHosts))
 	copy(ses.availableHosts, s.availableHosts)

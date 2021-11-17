@@ -24,7 +24,6 @@ import (
 
 func NewClientFromFlags() *Client {
 	settings := session.NewSession(session.Input{
-		PrivateKeys:    app.SSHPrivateKeys,
 		AvailableHosts: app.SSHHosts,
 		User:           app.SSHUser,
 		Port:           app.SSHPort,
