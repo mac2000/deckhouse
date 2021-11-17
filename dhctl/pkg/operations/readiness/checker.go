@@ -39,6 +39,14 @@ func (c *NodeGroupChecker) WithSourceCommandName(name string) *NodeGroupChecker 
 	return c
 }
 
+func (c *NodeGroupChecker) BeforeAction() (bool, error) {
+	return false, nil
+}
+
+func (c *NodeGroupChecker) AfterAction() error {
+	return nil
+}
+
 func (c *NodeGroupChecker) IsReady() error {
 	if c.checkers == nil {
 		return nil
