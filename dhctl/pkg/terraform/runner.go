@@ -302,16 +302,21 @@ func (r *Runner) isSkipChanges() (bool, error) {
 		return true, nil
 	}
 
-	//
-	if r.changeSettings.AutoApprove || r.changesInPlan == PlanHasNoChanges {
+	if r.changesInPlan == PlanHasNoChanges {
 		return false, nil
 	}
 
-	if !r.confirm().WithMessage("Do you want to CHANGE objects state in the cloud?").Ask() {
-		if r.changeSettings.SkipChangesOnDeny {
-			return true, nil
+	if !r.changeSettings.AutoApprove {
+		if !r.confirm().WithMessage("Do you want to CHANGE objects state in the cloud?").Ask() {
+			if r.changeSettings.SkipChangesOnDeny {
+				return true, nil
+			}
+			return false, ErrTerraformApplyAborted
 		}
-		return false, ErrTerraformApplyAborted
+	}
+
+	if err := r.isReadyToChange(); err != nil {
+		return false, err
 	}
 
 	return false, nil
@@ -336,10 +341,6 @@ func (r *Runner) Apply() error {
 		if skip {
 			log.InfoLn("Skip terraform apply.")
 			return nil
-		}
-
-		if err := r.isReadyToChange(); err != nil {
-			return err
 		}
 
 		args := []string{
@@ -453,6 +454,10 @@ func (r *Runner) Destroy() error {
 		if !r.confirm().WithMessage("Do you want to DELETE objects from the cloud?").Ask() {
 			return fmt.Errorf("terraform destroy aborted")
 		}
+	}
+
+	if err := r.isReadyToChange(); err != nil {
+		return err
 	}
 
 	// TODO: why is this line here?
