@@ -24,7 +24,7 @@ type NodeGroupChecker struct {
 }
 
 func NewEmptyChecker() *NodeGroupChecker {
-	return NewChecker(make([]string, 0), make([]NodeChecker, 0))
+	return NewChecker(nil, nil)
 }
 
 func NewChecker(nodesNamesToCheck []string, checkers []NodeChecker) *NodeGroupChecker {
@@ -40,6 +40,10 @@ func (c *NodeGroupChecker) WithSourceCommandName(name string) *NodeGroupChecker 
 }
 
 func (c *NodeGroupChecker) IsReady() error {
+	if c.checkers == nil {
+		return nil
+	}
+
 	if len(c.nodesNamesToCheck) == 0 {
 		return fmt.Errorf("Do not have control plane nodes to readiness check.")
 	}
