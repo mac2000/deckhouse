@@ -15,7 +15,9 @@
 package converge
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"os"
 	"sync"
 	"time"
@@ -91,6 +93,20 @@ func LockConvergeFromLocal(kubeCl *client.KubernetesClient, identity string) (fu
 }
 
 func GetLockLeaseConfig(identity string) *client.LeaseLockConfig {
+	additionalInfo := ""
+	if app.SSHUser != "" {
+		info := struct {
+			SshUser string `json:"ssh_user,omitempty"`
+		}{
+			SshUser: app.SSHUser,
+		}
+
+		infoStr, err := json.Marshal(info)
+		if err == nil {
+			additionalInfo = string(infoStr)
+		}
+	}
+
 	return &client.LeaseLockConfig{
 		Name:                 "d8-converge-lock",
 		Identity:             identity,
@@ -98,6 +114,7 @@ func GetLockLeaseConfig(identity string) *client.LeaseLockConfig {
 		LeaseDurationSeconds: 300,
 		RenewEverySeconds:    180,
 		RetryWaitDuration:    3 * time.Second,
+		AdditionalUserInfo:   additionalInfo,
 		OnRenewError: func(renewErr error) {
 			log.WarnF("Lease renew was failed. Send SIGINT and shutdown: %v\n", renewErr)
 			p, err := os.FindProcess(os.Getpid())
