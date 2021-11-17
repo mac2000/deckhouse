@@ -60,6 +60,10 @@ var (
 	ErrTerraformApplyAborted = errors.New("Terraform apply aborted.")
 )
 
+type ReadinessChecker interface {
+	IsReady() error
+}
+
 type ChangeActionSettings struct {
 	AutoDismissDestructive bool
 	AutoApprove            bool
@@ -88,6 +92,8 @@ type Runner struct {
 	cmd     *exec.Cmd
 	confirm func() *input.Confirmation
 	stopped bool
+
+	readinessCheck ReadinessChecker
 }
 
 func NewRunner(provider, prefix, layout, step string, stateCache state.Cache) *Runner {
@@ -136,6 +142,11 @@ func (r *Runner) WithConfirm(confirm func() *input.Confirmation) *Runner {
 
 func (r *Runner) WithStatePath(statePath string) *Runner {
 	r.statePath = statePath
+	return r
+}
+
+func (r *Runner) WithReadinessChecker(c ReadinessChecker) *Runner {
+	r.readinessCheck = c
 	return r
 }
 
@@ -276,7 +287,15 @@ func (r *Runner) stateName() string {
 	return fmt.Sprintf("%s.tfstate", r.name)
 }
 
-func (r *Runner) handleChanges() (bool, error) {
+func (r *Runner) isReadyToChange() error {
+	if r.readinessCheck == nil {
+		return nil
+	}
+
+	return r.readinessCheck.IsReady()
+}
+
+func (r *Runner) isSkipChanges() (bool, error) {
 	// first verify destructive change
 	if r.changesInPlan == PlanHasDestructiveChanges && r.changeSettings.AutoDismissDestructive {
 		// skip plan
@@ -310,13 +329,17 @@ func (r *Runner) Apply() error {
 		}
 		defer r.stateSaver.Stop()
 
-		skip, err := r.handleChanges()
+		skip, err := r.isSkipChanges()
 		if err != nil {
 			return err
 		}
 		if skip {
 			log.InfoLn("Skip terraform apply.")
 			return nil
+		}
+
+		if err := r.isReadyToChange(); err != nil {
+			return err
 		}
 
 		args := []string{

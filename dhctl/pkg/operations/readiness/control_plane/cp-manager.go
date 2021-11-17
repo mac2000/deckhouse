@@ -20,7 +20,7 @@ func NewManagerReadinessChecker(kubeCl *client.KubernetesClient) *ManagerReadine
 	}
 }
 
-func (c *ManagerReadinessChecker) IsReady(nodeName, _ string) (bool, error) {
+func (c *ManagerReadinessChecker) IsReady(nodeName string) (bool, error) {
 	cpmPodsList, err := c.kubeCl.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "app=d8-control-plane-manager",
 		FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName),

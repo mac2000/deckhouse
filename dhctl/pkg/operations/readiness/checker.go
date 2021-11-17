@@ -5,30 +5,32 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-type Node struct {
-	Name       string
-	ExternalIp string
-}
+var (
+	ErrNotReady = fmt.Errorf("Not ready.")
+)
 
 type NodeChecker interface {
-	IsReady(nodeName, ip string) (bool, error)
+	IsReady(nodeName string) (bool, error)
 	Name() string
 }
 
 type NodeGroupChecker struct {
-	nodesToAddresses  map[string]string
+	nodesNamesToCheck []string
 	checkers          []NodeChecker
 	sourceCommandName string
 }
 
-func NewChecker(allAddresses map[string]string, checkers []NodeChecker) *NodeGroupChecker {
+func NewEmptyChecker() *NodeGroupChecker {
+	return NewChecker(make([]string, 0), make([]NodeChecker, 0))
+}
+
+func NewChecker(nodesNamesToCheck []string, checkers []NodeChecker) *NodeGroupChecker {
 	return &NodeGroupChecker{
-		nodesToAddresses: allAddresses,
-		checkers:         checkers,
+		nodesNamesToCheck: nodesNamesToCheck,
+		checkers:          checkers,
 	}
 }
 
@@ -37,40 +39,36 @@ func (c *NodeGroupChecker) WithSourceCommandName(name string) *NodeGroupChecker 
 	return c
 }
 
-func (c *NodeGroupChecker) IsNodeGroupReady(excludeHostNames ...string) (bool, error) {
-	nodesToCheck := maputils.ExcludeKeys(c.nodesToAddresses, excludeHostNames...)
-
-	if len(nodesToCheck) == 0 {
-		return false, fmt.Errorf("do not have control plane nodes to readiness check. passed nodesToAddresses %v, excluded nodesToAddresses %s", c.nodesToAddresses, excludeHostNames)
+func (c *NodeGroupChecker) IsReady() error {
+	if len(c.nodesNamesToCheck) == 0 {
+		return fmt.Errorf("Do not have control plane nodes to readiness check.")
 	}
 
-	for nodeName := range nodesToCheck {
-		ready, err := c.NodeIsReady(nodeName)
-		if err != nil {
-			return false, err
+	return log.Process(c.sourceCommandName, "Control plane readiness check", func() error {
+		for _, nodeName := range c.nodesNamesToCheck {
+			ready, err := c.NodeIsReady(nodeName)
+			if err != nil {
+				return err
+			}
+
+			if !ready {
+				return ErrNotReady
+			}
 		}
 
-		if !ready {
-			return false, fmt.Errorf("node %s is not ready", nodeName)
-		}
-	}
+		return nil
+	})
 
-	return true, nil
 }
 
 func (c *NodeGroupChecker) NodeIsReady(nodeName string) (bool, error) {
-	ip, ok := c.nodesToAddresses[nodeName]
-	if !ok {
-		return false, fmt.Errorf("Node %s not found", nodeName)
-	}
-
-	title := fmt.Sprintf("Check control plane node %s is ready", nodeName)
+	title := fmt.Sprintf("Node %s is ready", nodeName)
 	var lastErr error
 
 	err := retry.NewLoop(title, 30, 10*time.Second).Run(func() error {
 		for _, check := range c.checkers {
 			err := log.Process(c.sourceCommandName, check.Name(), func() error {
-				isReady, err := check.IsReady(nodeName, ip)
+				isReady, err := check.IsReady(nodeName)
 				if err != nil {
 					return err
 				}

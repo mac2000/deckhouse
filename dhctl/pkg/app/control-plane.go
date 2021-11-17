@@ -6,11 +6,21 @@ import (
 
 var (
 	ControlPlaneHostname = ""
+	ControlPlaneIP       = ""
 )
 
-func DefineControlPlaneFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("hostname", "Control plane hostname to check").
-		Envar(configEnvName("CONTROL_PLANE_HOSTNAME")).
+func DefineControlPlaneFlags(cmd *kingpin.CmdClause, ipRequired bool) {
+	cmd.Flag("control-plane-node-hostname", "Control plane node hostname to check").
+		Envar(configEnvName("CONTROL_PLANE_NODE_HOSTNAME")).
 		Required().
 		StringVar(&ControlPlaneHostname)
+
+	ipFlag := cmd.Flag("control-plane-node-ip", "Control plane node ip to check").
+		Envar(configEnvName("CONTROL_PLANE_NODE_IP"))
+
+	if ipRequired {
+		ipFlag.Required()
+	}
+
+	ipFlag.StringVar(&ControlPlaneIP)
 }

@@ -54,7 +54,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 		}
 
 		// ip is empty because we want check via ssh-hosts passed via cm args
-		ready, err := checker.IsReady("", "")
+		ready, err := checker.IsReady("")
 		if err != nil {
 			proxyClose()
 			return err

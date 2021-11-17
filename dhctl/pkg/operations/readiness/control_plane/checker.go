@@ -5,12 +5,20 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/readiness"
 )
 
-func NewChecker(kubeCl *client.KubernetesClient, allAddresses map[string]string) *readiness.NodeGroupChecker {
+func NewChecker(kubeCl *client.KubernetesClient, nodesWithIPs map[string]string) *readiness.NodeGroupChecker {
+	proxyChecker := NewKubeProxyChecker().
+		WithExternalIPs(nodesWithIPs)
+
 	checkers := []readiness.NodeChecker{
 		readiness.NewKubeNodeReadinessChecker(kubeCl),
-		NewKubeProxyChecker(),
+		proxyChecker,
 		NewManagerReadinessChecker(kubeCl),
 	}
 
-	return readiness.NewChecker(allAddresses, checkers)
+	nodes := make([]string, 0)
+	for nodeName := range nodesWithIPs {
+		nodes = append(nodes, nodeName)
+	}
+
+	return readiness.NewChecker(nodes, checkers)
 }

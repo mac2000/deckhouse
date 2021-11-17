@@ -110,6 +110,7 @@ func main() {
 		controlPlaneCmd := testCmd.Command("control-plane", "Commands to test control plane nodes.")
 		{
 			commands.DefineTestControlPlaneManagerReadyCommand(controlPlaneCmd)
+			commands.DefineTestControlPlaneNodeReadyCommand(controlPlaneCmd)
 		}
 	}
 

@@ -17,7 +17,7 @@ func DefineTestControlPlaneManagerReadyCommand(parent *kingpin.CmdClause) *kingp
 	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
-	app.DefineControlPlaneFlags(cmd)
+	app.DefineControlPlaneFlags(cmd, false)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		sshClient, err := ssh.NewInitClientFromFlags(true)
@@ -33,7 +33,7 @@ func DefineTestControlPlaneManagerReadyCommand(parent *kingpin.CmdClause) *kingp
 		}
 
 		checker := control_plane.NewManagerReadinessChecker(kubeCl)
-		ready, err := checker.IsReady(app.ControlPlaneHostname, "")
+		ready, err := checker.IsReady(app.ControlPlaneHostname)
 		if err != nil {
 			return fmt.Errorf("Control plane manager is not ready: %s", err)
 		}
@@ -43,6 +43,42 @@ func DefineTestControlPlaneManagerReadyCommand(parent *kingpin.CmdClause) *kingp
 		} else {
 			log.WarnLn("Control plane manager is not ready")
 		}
+
+		return nil
+	})
+	return cmd
+}
+
+func DefineTestControlPlaneNodeReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	cmd := parent.Command("node", "Test control plane node is ready.")
+	app.DefineSSHFlags(cmd)
+	app.DefineBecomeFlags(cmd)
+	app.DefineKubeFlags(cmd)
+	app.DefineControlPlaneFlags(cmd, true)
+
+	cmd.Action(func(c *kingpin.ParseContext) error {
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
+		}
+
+		kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
+		// auto init
+		err = kubeCl.Init(client.AppKubernetesInitParams())
+		if err != nil {
+			return fmt.Errorf("open kubernetes connection: %v", err)
+		}
+
+		checker := control_plane.NewChecker(kubeCl, map[string]string{
+			app.ControlPlaneHostname: app.ControlPlaneIP,
+		}).WithSourceCommandName("test")
+
+		err = checker.IsReady()
+		if err != nil {
+			return fmt.Errorf("Control plane node is not ready: %v", err)
+		}
+
+		log.InfoLn("Control plane manager node is ready")
 
 		return nil
 	})

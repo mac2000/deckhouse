@@ -19,7 +19,7 @@ func NewKubeNodeReadinessChecker(kubeCl *client.KubernetesClient) *KubeNodeReadi
 	}
 }
 
-func (c *KubeNodeReadinessChecker) IsReady(nodeName, _ string) (bool, error) {
+func (c *KubeNodeReadinessChecker) IsReady(nodeName string) (bool, error) {
 	node, err := c.kubeCl.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		return false, err

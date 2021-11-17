@@ -12,11 +12,12 @@ import (
 )
 
 type KubeProxyChecker struct {
-	initParams     *client.KubernetesInitParams
-	nsToCheck      string
-	logCheckResult bool
-	askPassword    bool
-	stopProxy      bool
+	initParams       *client.KubernetesInitParams
+	nsToCheck        string
+	logCheckResult   bool
+	askPassword      bool
+	stopProxy        bool
+	nodesExternalIPs map[string]string
 }
 
 func NewKubeProxyChecker() *KubeProxyChecker {
@@ -51,10 +52,21 @@ func (c *KubeProxyChecker) WithNamespaceToCheck(ns string) *KubeProxyChecker {
 	return c
 }
 
-func (c *KubeProxyChecker) IsReady(_, nodeExternalIp string) (bool, error) {
+func (c *KubeProxyChecker) WithExternalIPs(ips map[string]string) *KubeProxyChecker {
+	c.nodesExternalIPs = ips
+	return c
+}
+
+func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 	sshClient := ssh.NewClientFromFlags()
-	if nodeExternalIp != "" {
-		sshClient.Settings.SetAvailableHosts([]string{nodeExternalIp})
+
+	if len(c.nodesExternalIPs) > 0 {
+		ip, ok := c.nodesExternalIPs[nodeName]
+		if !ok {
+			return false, fmt.Errorf("Not found external ip for node %s", nodeName)
+		}
+
+		sshClient.Settings.SetAvailableHosts([]string{ip})
 	}
 
 	var err error
@@ -62,10 +74,6 @@ func (c *KubeProxyChecker) IsReady(_, nodeExternalIp string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
-	defer func() {
-		sshClient.Stop()
-	}()
 
 	kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
 	err = kubeCl.Init(client.AppKubernetesInitParams())
