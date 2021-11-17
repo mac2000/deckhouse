@@ -26,6 +26,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -60,10 +62,6 @@ var (
 	ErrTerraformApplyAborted = errors.New("Terraform apply aborted.")
 )
 
-type ReadinessChecker interface {
-	IsReady() error
-}
-
 type ChangeActionSettings struct {
 	AutoDismissDestructive bool
 	AutoApprove            bool
@@ -93,7 +91,7 @@ type Runner struct {
 	confirm func() *input.Confirmation
 	stopped bool
 
-	readinessCheck ReadinessChecker
+	hook InfraActionHook
 }
 
 func NewRunner(provider, prefix, layout, step string, stateCache state.Cache) *Runner {
@@ -145,8 +143,8 @@ func (r *Runner) WithStatePath(statePath string) *Runner {
 	return r
 }
 
-func (r *Runner) WithReadinessChecker(c ReadinessChecker) *Runner {
-	r.readinessCheck = c
+func (r *Runner) WithHook(h InfraActionHook) *Runner {
+	r.hook = h
 	return r
 }
 
@@ -287,39 +285,62 @@ func (r *Runner) stateName() string {
 	return fmt.Sprintf("%s.tfstate", r.name)
 }
 
-func (r *Runner) isReadyToChange() error {
-	if r.readinessCheck == nil {
-		return nil
+func (r *Runner) getHook() InfraActionHook {
+	if r.hook == nil {
+		return &DummyHook{}
 	}
 
-	return r.readinessCheck.IsReady()
+	return r.hook
 }
 
-func (r *Runner) isSkipChanges() (bool, error) {
+func (r *Runner) runBeforeActionAndReady() (runPostAction bool, err error) {
+	hook := r.getHook()
+
+	runPostAction, err = hook.BeforeAction()
+	if err != nil {
+		return false, err
+	}
+
+	if err := hook.IsReady(); err != nil {
+		var resErr *multierror.Error
+		resErr = multierror.Append(resErr, err)
+
+		if runPostAction {
+			err := hook.AfterAction()
+			if err != nil {
+				resErr = multierror.Append(resErr, err)
+			}
+		}
+
+		return false, resErr.ErrorOrNil()
+	}
+
+	return runPostAction, nil
+}
+
+func (r *Runner) isSkipChanges() (skip bool, runPostAction bool, err error) {
 	// first verify destructive change
 	if r.changesInPlan == PlanHasDestructiveChanges && r.changeSettings.AutoDismissDestructive {
 		// skip plan
-		return true, nil
+		return true, false, nil
 	}
 
 	if r.changesInPlan == PlanHasNoChanges {
-		return false, nil
+		return false, false, nil
 	}
 
 	if !r.changeSettings.AutoApprove {
 		if !r.confirm().WithMessage("Do you want to CHANGE objects state in the cloud?").Ask() {
 			if r.changeSettings.SkipChangesOnDeny {
-				return true, nil
+				return true, false, nil
 			}
-			return false, ErrTerraformApplyAborted
+			return false, false, ErrTerraformApplyAborted
 		}
 	}
 
-	if err := r.isReadyToChange(); err != nil {
-		return false, err
-	}
+	runPostAction, err = r.runBeforeActionAndReady()
 
-	return false, nil
+	return false, runPostAction, err
 }
 
 func (r *Runner) Apply() error {
@@ -334,7 +355,7 @@ func (r *Runner) Apply() error {
 		}
 		defer r.stateSaver.Stop()
 
-		skip, err := r.isSkipChanges()
+		skip, _, err := r.isSkipChanges()
 		if err != nil {
 			return err
 		}
@@ -456,7 +477,8 @@ func (r *Runner) Destroy() error {
 		}
 	}
 
-	if err := r.isReadyToChange(); err != nil {
+	_, err := r.runBeforeActionAndReady()
+	if err != nil {
 		return err
 	}
 
