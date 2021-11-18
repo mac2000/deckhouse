@@ -212,16 +212,10 @@ func (d *LogPrinter) WaitPodBecomeReady() *LogPrinter {
 }
 
 func (d *LogPrinter) GetPod() error {
-	pods, err := d.kubeCl.CoreV1().Pods("d8-system").List(context.TODO(), metav1.ListOptions{LabelSelector: "app=deckhouse"})
+	pod, err := GetPod(d.kubeCl)
 	if err != nil {
-		return ErrListPods
+		return err
 	}
-
-	if len(pods.Items) != 1 {
-		return ErrListPods
-	}
-
-	pod := pods.Items[0]
 
 	message := fmt.Sprintf("Deckhouse pod found: %s (%s)", pod.Name, pod.Status.Phase)
 	if pod.Status.Phase != corev1.PodRunning {
@@ -231,7 +225,7 @@ func (d *LogPrinter) GetPod() error {
 	log.InfoLn(message)
 	log.InfoLn("Running pod found! Checking logs...")
 
-	d.deckhousePod = &pod
+	d.deckhousePod = pod
 	return nil
 }
 
