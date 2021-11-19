@@ -169,6 +169,13 @@ spec:
       labels:
         app: deckhouse
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: dhctl.deckhouse.io/node-for-converge
+                    operator: DoesNotExist
       containers:
       - name: deckhouse
         image: PLACEHOLDER
