@@ -293,7 +293,7 @@ func (r *Runner) getHook() InfraActionHook {
 	return r.hook
 }
 
-func (r *Runner) runBeforeActionAndReady() (runPostAction bool, err error) {
+func (r *Runner) runBeforeActionAndWaitReady() (runPostAction bool, err error) {
 	hook := r.getHook()
 
 	runPostAction, err = hook.BeforeAction()
@@ -318,7 +318,7 @@ func (r *Runner) runBeforeActionAndReady() (runPostAction bool, err error) {
 	return runPostAction, nil
 }
 
-func (r *Runner) isSkipChanges() (skip bool, runPostAction bool, err error) {
+func (r *Runner) isSkipChanges() (skip bool, runAfterAction bool, err error) {
 	// first verify destructive change
 	if r.changesInPlan == PlanHasDestructiveChanges && r.changeSettings.AutoDismissDestructive {
 		// skip plan
@@ -338,9 +338,9 @@ func (r *Runner) isSkipChanges() (skip bool, runPostAction bool, err error) {
 		}
 	}
 
-	runPostAction, err = r.runBeforeActionAndReady()
+	runAfterAction, err = r.runBeforeActionAndWaitReady()
 
-	return false, runPostAction, err
+	return false, runAfterAction, err
 }
 
 func (r *Runner) Apply() error {
@@ -349,13 +349,7 @@ func (r *Runner) Apply() error {
 	}
 
 	return log.Process("default", "terraform apply ...", func() error {
-		err := r.stateSaver.Start(r)
-		if err != nil {
-			return err
-		}
-		defer r.stateSaver.Stop()
-
-		skip, _, err := r.isSkipChanges()
+		skip, runPostAction, err := r.isSkipChanges()
 		if err != nil {
 			return err
 		}
@@ -363,6 +357,12 @@ func (r *Runner) Apply() error {
 			log.InfoLn("Skip terraform apply.")
 			return nil
 		}
+
+		err = r.stateSaver.Start(r)
+		if err != nil {
+			return err
+		}
+		defer r.stateSaver.Stop()
 
 		args := []string{
 			"apply",
@@ -384,7 +384,17 @@ func (r *Runner) Apply() error {
 
 		_, err = r.execTerraform(args...)
 
-		return err
+		var errRes *multierror.Error
+		errRes = multierror.Append(errRes, err)
+
+		// yes, do not check err from exec terraform
+		// always run post action if need
+		if runPostAction {
+			err := r.getHook().AfterAction()
+			errRes = multierror.Append(errRes, err)
+		}
+
+		return errRes.ErrorOrNil()
 	})
 }
 
@@ -477,7 +487,7 @@ func (r *Runner) Destroy() error {
 		}
 	}
 
-	_, err := r.runBeforeActionAndReady()
+	runAfterAction, err := r.runBeforeActionAndWaitReady()
 	if err != nil {
 		return err
 	}
@@ -500,11 +510,19 @@ func (r *Runner) Destroy() error {
 		}
 		args = append(args, r.workingDir)
 
-		if _, err = r.execTerraform(args...); err != nil {
-			return err
+		_, err = r.execTerraform(args...)
+
+		var errRes *multierror.Error
+		errRes = multierror.Append(errRes, err)
+
+		// yes, do not check err from exec terraform
+		// always run post action if need
+		if runAfterAction {
+			err := r.getHook().AfterAction()
+			errRes = multierror.Append(errRes, err)
 		}
 
-		return nil
+		return errRes.ErrorOrNil()
 	})
 }
 
