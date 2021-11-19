@@ -326,6 +326,7 @@ func (r *Runner) isSkipChanges() (skip bool, runAfterAction bool, err error) {
 	}
 
 	if r.changesInPlan == PlanHasNoChanges {
+		// if plan has not changes we will run apply
 		return false, false, nil
 	}
 

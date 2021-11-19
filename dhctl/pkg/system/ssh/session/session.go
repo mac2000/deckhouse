@@ -110,6 +110,13 @@ func (s *Session) SetAvailableHosts(hosts []string) {
 	s.selectNewHost()
 }
 
+func (s *Session) AvailableHosts() []string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	return append(make([]string, 0), s.availableHosts...)
+}
+
 func (s *Session) CountHosts() int {
 	defer s.lock.RUnlock()
 	s.lock.RLock()

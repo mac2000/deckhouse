@@ -50,7 +50,10 @@ const (
 	PhaseAllNodes  = Phase("all-nodes")
 )
 
-var ErrConvergeInterrupted = errors.New("Interrupted.")
+var (
+	ErrConvergeInterrupted      = errors.New("Interrupted.")
+	ErrNotEnoughMastersSSHHosts = errors.New("Not enough master ssh hosts.")
+)
 
 type Runner struct {
 	kubeCl         *client.KubernetesClient
@@ -332,6 +335,21 @@ func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupG
 		}
 
 		c.nodeExternalIPs = ips
+	}
+
+	if c.client.SSHClient != nil {
+		availableHosts := c.client.SSHClient.Settings.AvailableHosts()
+		if len(availableHosts) != len(c.nodeExternalIPs) {
+			msg := fmt.Sprintf(`Warning! Not enough master ssh hosts.
+If you will lost connection to master converge may not be finished.
+Do you want continue with next hosts:
+%v
+?
+`, availableHosts)
+			if !input.NewConfirmation().WithMessage(msg).Ask() {
+				return nil, ErrNotEnoughMastersSSHHosts
+			}
+		}
 	}
 
 	nodesToCheck := maputils.ExcludeKeys(c.nodeExternalIPs, convergedNode)
@@ -629,6 +647,10 @@ func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) erro
 		})
 
 		if err != nil {
+			if errors.Is(err, ErrNotEnoughMastersSSHHosts) {
+				return err
+			}
+
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %v", nodeName, err))
 		}
 	}

@@ -16,8 +16,10 @@ package ssh
 
 import (
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"sync"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
@@ -41,6 +43,9 @@ func initAgentInstance() (*frontend.Agent, error) {
 		if err != nil {
 			return nil, err
 		}
+		tomb.RegisterOnShutdown("Stop ssh-agent", func() {
+			agentInstance.Stop()
+		})
 
 		agentInstance = inst
 	}
@@ -102,8 +107,6 @@ func (s *Client) Check() *frontend.Check {
 
 // Stop stop client
 func (s *Client) Stop() {
-	if s.Agent != nil {
-		s.Agent.Stop()
-		s.Agent = nil
-	}
+	// do nothing
+	// stop agent on shutdown because agent is singleton
 }
