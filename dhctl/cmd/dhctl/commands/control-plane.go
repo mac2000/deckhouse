@@ -8,7 +8,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/readiness/control_plane"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/control_plane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 )
 
@@ -69,7 +69,7 @@ func DefineTestControlPlaneNodeReadyCommand(parent *kingpin.CmdClause) *kingpin.
 			return fmt.Errorf("open kubernetes connection: %v", err)
 		}
 
-		checker := control_plane.NewChecker(kubeCl, map[string]string{
+		checker := control_plane.NewHook(kubeCl, map[string]string{
 			app.ControlPlaneHostname: app.ControlPlaneIP,
 		}).WithSourceCommandName("test")
 

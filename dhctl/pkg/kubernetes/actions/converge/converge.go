@@ -18,10 +18,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/readiness"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/readiness/control_plane"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputils"
 	"sort"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/control_plane"
 
 	"github.com/hashicorp/go-multierror"
 
@@ -32,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -304,17 +304,17 @@ func (c *NodeGroupController) WithExcludedNodes(nodesMap map[string]bool) *NodeG
 	return c
 }
 
-func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupGroupOptions, excludeNodes ...string) (terraform.InfraActionHook, error) {
+func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupGroupOptions, convergedNode string) (terraform.InfraActionHook, error) {
 	if c.name != MasterNodeGroupName {
 		// for not master node groups do not need readiness check
-		return readiness.NewEmptyChecker(), nil
+		return &terraform.DummyHook{}, nil
 	}
 
 	// single master do no need readiness check
 	// it doesn't make sense
 	// but single master can converge for updating
 	if nodeGroup.CurReplicas() == 1 {
-		return readiness.NewEmptyChecker(), nil
+		return &terraform.DummyHook{}, nil
 	}
 
 	if c.nodeExternalIPs == nil {
@@ -334,9 +334,13 @@ func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupG
 		c.nodeExternalIPs = ips
 	}
 
-	nodesToCheck := maputils.ExcludeKeys(c.nodeExternalIPs, excludeNodes...)
+	nodesToCheck := maputils.ExcludeKeys(c.nodeExternalIPs, convergedNode)
 
-	return control_plane.NewChecker(c.client, nodesToCheck).WithSourceCommandName("converge"), nil
+	h := control_plane.NewHook(c.client, nodesToCheck).
+		WithSourceCommandName("converge").
+		WithNodeToConverge(convergedNode)
+
+	return h, nil
 }
 
 func (c *NodeGroupController) Run() error {
