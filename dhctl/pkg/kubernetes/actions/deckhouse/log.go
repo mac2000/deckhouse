@@ -36,6 +36,7 @@ var (
 	ErrListPods      = errors.New("No Deckhouse pod found.")
 	ErrTimedOut      = errors.New("Time is out waiting for Deckhouse readiness.")
 	ErrRequestFailed = errors.New("Request failed. Probably pod was restarted during installation.")
+	ErrIncorrectNode = errors.New("Deckhouse on wrong node")
 )
 
 type logLine struct {
@@ -200,6 +201,8 @@ type LogPrinter struct {
 	lastErrorTime time.Time
 
 	stopOutputNoMoreConvergeTasks bool
+
+	excludeNodeName string
 }
 
 func NewLogPrinter(kubeCl *client.KubernetesClient) *LogPrinter {
@@ -208,6 +211,11 @@ func NewLogPrinter(kubeCl *client.KubernetesClient) *LogPrinter {
 
 func (d *LogPrinter) WaitPodBecomeReady() *LogPrinter {
 	d.waitPodBecomeReady = true
+	return d
+}
+
+func (d *LogPrinter) WithExcludeNode(nodeName string) *LogPrinter {
+	d.excludeNodeName = nodeName
 	return d
 }
 
@@ -237,6 +245,10 @@ func (d *LogPrinter) checkDeckhousePodReady() (bool, error) {
 	runningPod, err := d.kubeCl.CoreV1().Pods("d8-system").Get(context.TODO(), d.deckhousePod.Name, metav1.GetOptions{})
 	if err != nil {
 		return false, ErrRequestFailed
+	}
+
+	if d.excludeNodeName != "" && runningPod.Spec.NodeName == d.excludeNodeName {
+		return false, ErrIncorrectNode
 	}
 
 	ready := true

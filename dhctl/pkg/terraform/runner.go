@@ -293,12 +293,12 @@ func (r *Runner) getHook() InfraActionHook {
 	return r.hook
 }
 
-func (r *Runner) runBeforeActionAndWaitReady() (runPostAction bool, err error) {
+func (r *Runner) runBeforeActionAndWaitReady() error {
 	hook := r.getHook()
 
-	runPostAction, err = hook.BeforeAction()
+	runPostAction, err := hook.BeforeAction()
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	if err := hook.IsReady(); err != nil {
@@ -312,36 +312,36 @@ func (r *Runner) runBeforeActionAndWaitReady() (runPostAction bool, err error) {
 			}
 		}
 
-		return false, resErr.ErrorOrNil()
+		return resErr.ErrorOrNil()
 	}
 
-	return runPostAction, nil
+	return nil
 }
 
-func (r *Runner) isSkipChanges() (skip bool, runAfterAction bool, err error) {
+func (r *Runner) isSkipChanges() (skip bool, err error) {
 	// first verify destructive change
 	if r.changesInPlan == PlanHasDestructiveChanges && r.changeSettings.AutoDismissDestructive {
 		// skip plan
-		return true, false, nil
+		return true, nil
 	}
 
 	if r.changesInPlan == PlanHasNoChanges {
 		// if plan has not changes we will run apply
-		return false, false, nil
+		return false, nil
 	}
 
 	if !r.changeSettings.AutoApprove {
 		if !r.confirm().WithMessage("Do you want to CHANGE objects state in the cloud?").Ask() {
 			if r.changeSettings.SkipChangesOnDeny {
-				return true, false, nil
+				return true, nil
 			}
-			return false, false, ErrTerraformApplyAborted
+			return false, ErrTerraformApplyAborted
 		}
 	}
 
-	runAfterAction, err = r.runBeforeActionAndWaitReady()
+	err = r.runBeforeActionAndWaitReady()
 
-	return false, runAfterAction, err
+	return false, err
 }
 
 func (r *Runner) Apply() error {
@@ -350,7 +350,7 @@ func (r *Runner) Apply() error {
 	}
 
 	return log.Process("default", "terraform apply ...", func() error {
-		skip, runPostAction, err := r.isSkipChanges()
+		skip, err := r.isSkipChanges()
 		if err != nil {
 			return err
 		}
@@ -390,10 +390,8 @@ func (r *Runner) Apply() error {
 
 		// yes, do not check err from exec terraform
 		// always run post action if need
-		if runPostAction {
-			err := r.getHook().AfterAction()
-			errRes = multierror.Append(errRes, err)
-		}
+		err = r.getHook().AfterAction()
+		errRes = multierror.Append(errRes, err)
 
 		return errRes.ErrorOrNil()
 	})
@@ -488,7 +486,7 @@ func (r *Runner) Destroy() error {
 		}
 	}
 
-	runAfterAction, err := r.runBeforeActionAndWaitReady()
+	err := r.runBeforeActionAndWaitReady()
 	if err != nil {
 		return err
 	}
@@ -518,10 +516,8 @@ func (r *Runner) Destroy() error {
 
 		// yes, do not check err from exec terraform
 		// always run post action if need
-		if runAfterAction {
-			err := r.getHook().AfterAction()
-			errRes = multierror.Append(errRes, err)
-		}
+		err = r.getHook().AfterAction()
+		errRes = multierror.Append(errRes, err)
 
 		return errRes.ErrorOrNil()
 	})

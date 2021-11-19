@@ -71,7 +71,7 @@ func DefineTestControlPlaneNodeReadyCommand(parent *kingpin.CmdClause) *kingpin.
 
 		checker := control_plane.NewHook(kubeCl, map[string]string{
 			app.ControlPlaneHostname: app.ControlPlaneIP,
-		}).WithSourceCommandName("test")
+		}, "").WithSourceCommandName("test")
 
 		err = checker.IsReady()
 		if err != nil {

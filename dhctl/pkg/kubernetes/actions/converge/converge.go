@@ -354,7 +354,7 @@ Do you want continue with next hosts:
 
 	nodesToCheck := maputils.ExcludeKeys(c.nodeExternalIPs, convergedNode)
 
-	h := control_plane.NewHook(c.client, nodesToCheck).
+	h := control_plane.NewHook(c.client, nodesToCheck, c.config.UUID).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode)
 

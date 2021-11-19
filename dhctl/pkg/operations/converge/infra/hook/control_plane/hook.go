@@ -25,11 +25,13 @@ type Hook struct {
 	kubeCl            *client.KubernetesClient
 	nodeToConverge    string
 	visitedNodes      map[string]struct{}
+	runAfterAction    bool
 }
 
-func NewHook(kubeCl *client.KubernetesClient, nodesToCheckWithIPs map[string]string) *Hook {
+func NewHook(kubeCl *client.KubernetesClient, nodesToCheckWithIPs map[string]string, clusterUUID string) *Hook {
 	proxyChecker := NewKubeProxyChecker().
-		WithExternalIPs(nodesToCheckWithIPs)
+		WithExternalIPs(nodesToCheckWithIPs).
+		WithClusterUUID(clusterUUID)
 
 	checkers := []hook.NodeChecker{
 		hook.NewKubeNodeReadinessChecker(kubeCl),
@@ -89,7 +91,6 @@ func (h *Hook) convergeLabelToNode(add bool) error {
 }
 
 func (h *Hook) BeforeAction() (bool, error) {
-	runAfterAction := false
 	err := log.Process(h.sourceCommandName, "Check deckhouse pod is not on converged node", func() error {
 		var pod *v1.Pod
 		err := retry.NewSilentLoop("Get deckhouse pod", 10, 3*time.Second).Run(func() error {
@@ -104,16 +105,16 @@ func (h *Hook) BeforeAction() (bool, error) {
 		}
 
 		if pod.Spec.NodeName != h.nodeToConverge {
-			runAfterAction = false
+			h.runAfterAction = false
 			return nil
 		}
 
 		confirm := input.NewConfirmation().
-			WithMessage("Deckhouse pod located on node to converge. Do you want to move pod in another node?")
+			WithMessage("Deckhouse pod is located on node to converge. Do you want to move pod in another node?")
 
 		if !confirm.Ask() {
 			log.WarnLn("Skip moving deckhouse pod")
-			runAfterAction = false
+			h.runAfterAction = false
 			return nil
 		}
 
@@ -134,7 +135,7 @@ func (h *Hook) BeforeAction() (bool, error) {
 			return err
 		}
 
-		runAfterAction = true
+		h.runAfterAction = true
 
 		return nil
 	})
@@ -143,10 +144,14 @@ func (h *Hook) BeforeAction() (bool, error) {
 		return false, err
 	}
 
-	return false, nil
+	return h.runAfterAction, err
 }
 
 func (h *Hook) AfterAction() error {
+	if !h.runAfterAction {
+		return nil
+	}
+
 	title := fmt.Sprintf("Delete label '%s' from converged node", convergeLabel)
 	return retry.NewLoop(title, 10, 3*time.Second).Run(func() error {
 		return h.convergeLabelToNode(false)
@@ -154,10 +159,15 @@ func (h *Hook) AfterAction() error {
 }
 
 func (h *Hook) IsReady() error {
-	err := deckhouse.WaitForReadiness(h.kubeCl)
+	excludeNode := h.nodeToConverge
+	if !h.runAfterAction {
+		excludeNode = ""
+	}
+
+	err := deckhouse.WaitForReadinessNotOnNode(h.kubeCl, excludeNode)
 	if err != nil {
 		return err
 	}
 
-	return hook.IsAllNodesReady(h.checkers, h.nodesNamesToCheck, h.sourceCommandName, "Control plane readiness check")
+	return hook.IsAllNodesReady(h.checkers, h.nodesNamesToCheck, h.sourceCommandName, "Control plane nodes are ready")
 }
