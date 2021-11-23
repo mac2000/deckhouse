@@ -82,13 +82,11 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 		return false, fmt.Errorf("open kubernetes connection: %v", err)
 	}
 
-	// d8-cluster-uuid
-	ns, err := kubeCl.CoreV1().ConfigMaps("kube-system").Get(context.TODO(), "d8-cluster-uuid", v1.GetOptions{})
-	if err != nil {
-		return false, err
-	}
+	defer func() {
+		if !c.stopProxy {
+			return
+		}
 
-	if c.stopProxy {
 		if kubeCl.KubeProxy != nil {
 			kubeCl.KubeProxy.Stop()
 		}
@@ -96,6 +94,12 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 		if kubeCl.SSHClient != nil {
 			kubeCl.SSHClient.Stop()
 		}
+	}()
+
+	// d8-cluster-uuid
+	ns, err := kubeCl.CoreV1().ConfigMaps("kube-system").Get(context.TODO(), "d8-cluster-uuid", v1.GetOptions{})
+	if err != nil {
+		return false, err
 	}
 
 	c.printNs(ns)
