@@ -16,11 +16,14 @@ package ssh
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
+
+var ErrNotEnoughMastersSSHHosts = fmt.Errorf("Master ssh hosts fix canceled.")
 
 func NewClientFromFlags() *Client {
 	settings := session.NewSession(session.Input{
@@ -75,4 +78,56 @@ func NewInitClientFromFlags(askPassword bool) (*Client, error) {
 	}
 
 	return sshClient, nil
+}
+
+func CheckSSHHosts(userPassedHosts []string, nodesToCheck map[string]string, runConfirm func(string) bool) (bool, error) {
+	var nodesForOutput []string
+	knownHosts := make(map[string]struct{})
+
+	for nodeName, host := range nodesToCheck {
+		s := fmt.Sprintf("%s | %s", nodeName, host)
+		nodesForOutput = append(nodesForOutput, s)
+		knownHosts[host] = struct{}{}
+	}
+
+	msg := ""
+
+	if len(userPassedHosts) < len(nodesToCheck) {
+		msg = fmt.Sprintf("Not enough master ssh hosts.")
+	} else if len(userPassedHosts) > len(nodesToCheck) {
+		msg = "Too enough master ssh hosts. Maybe you want to delete nodes, but pass hosts for delete via ssh-host?"
+	} else {
+		var notKnownHosts []string
+		for _, host := range userPassedHosts {
+			if _, ok := knownHosts[host]; !ok {
+				notKnownHosts = append(notKnownHosts, host)
+			}
+		}
+
+		if len(notKnownHosts) > 0 {
+			msg = "Found unknown ssh hosts. Maybe you want to delete nodes, but pass hosts for delete via ssh-host?"
+		}
+	}
+
+	if msg != "" {
+		msg := fmt.Sprintf(`Warning! %s
+If you will lost connection to master, converge may not be finished.
+You passed:
+%v
+
+Known master hosts from state:
+%v
+
+Do you want set hosts from terraform state?
+Choice 'N' if you want to fix hosts in command line argument
+`, msg, userPassedHosts, strings.Join(nodesForOutput, "\n"))
+
+		if runConfirm(msg) {
+			return true, nil
+		}
+
+		return false, ErrNotEnoughMastersSSHHosts
+	}
+
+	return false, nil
 }

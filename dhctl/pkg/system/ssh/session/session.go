@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutils"
 )
 
 type Input struct {
@@ -96,9 +98,11 @@ func (s *Session) ChoiceNewHost() {
 	defer s.lock.Unlock()
 	s.lock.Lock()
 
-	s.selectNewHost()
+	s.selectNewHost("")
 }
 
+// SetAvailableHosts
+// Set Available hosts. Current host can choice
 func (s *Session) SetAvailableHosts(hosts []string) {
 	defer s.lock.Unlock()
 	s.lock.Lock()
@@ -107,7 +111,21 @@ func (s *Session) SetAvailableHosts(hosts []string) {
 	copy(s.availableHosts, hosts)
 
 	s.resetUsedHosts()
-	s.selectNewHost()
+	s.selectNewHost("")
+}
+
+// ReplaceAvailableHosts
+// Set Available hosts and try save current host if it exists in cluster
+// return true if current host found in new hosts
+func (s *Session) ReplaceAvailableHosts(hosts []string) bool {
+	defer s.lock.Unlock()
+	s.lock.Lock()
+
+	s.availableHosts = make([]string, len(hosts))
+	copy(s.availableHosts, hosts)
+
+	s.resetUsedHosts()
+	return s.selectNewHost(s.host)
 }
 
 func (s *Session) AvailableHosts() []string {
@@ -201,19 +219,37 @@ func (s *Session) resetUsedHosts() {
 	copy(s.remainingHosts, s.availableHosts)
 }
 
-func (s *Session) selectNewHost() {
+// selectNewHost
+// select new host and update remaining hosts
+// newHostForSet - if not empty - try to choice its host
+//				 - if host not found choice from remaining hosts
+// return true if newHostForSet found and set
+func (s *Session) selectNewHost(newHostForSet string) bool {
 	if len(s.availableHosts) == 0 {
 		s.host = ""
-		return
+		return false
+	}
+
+	hostIndx := 0
+	found := false
+
+	if newHostForSet != "" {
+		indx := stringsutils.Index(s.availableHosts, newHostForSet)
+		if indx >= 0 {
+			s.resetUsedHosts()
+			hostIndx = indx
+			found = true
+		}
 	}
 
 	if len(s.remainingHosts) == 0 {
 		s.resetUsedHosts()
 	}
 
-	indx := 0
-	host := s.remainingHosts[indx]
-	s.remainingHosts = append(s.remainingHosts[:indx], s.remainingHosts[indx+1:]...)
+	host := s.remainingHosts[hostIndx]
+	s.remainingHosts = append(s.remainingHosts[:hostIndx], s.remainingHosts[hostIndx+1:]...)
 
 	s.host = host
+
+	return found
 }

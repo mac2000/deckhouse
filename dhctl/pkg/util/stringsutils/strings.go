@@ -32,7 +32,7 @@ func RandomStrElement(list []string) (string, int) {
 	return list[indx], indx
 }
 
-func ExcludeElementFromSlice(list []string, elem string) []string {
+func Index(list []string, elem string) int {
 	indx := -1
 	for i, v := range list {
 		if v == elem {
@@ -40,6 +40,12 @@ func ExcludeElementFromSlice(list []string, elem string) []string {
 			break
 		}
 	}
+
+	return indx
+}
+
+func ExcludeElementFromSlice(list []string, elem string) []string {
+	indx := Index(list, elem)
 
 	if indx >= 0 {
 		firstPart := list[:indx]

@@ -20,15 +20,15 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/control_plane"
-
 	"github.com/hashicorp/go-multierror"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/control_plane"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputils"
@@ -51,8 +51,7 @@ const (
 )
 
 var (
-	ErrConvergeInterrupted      = errors.New("Interrupted.")
-	ErrNotEnoughMastersSSHHosts = errors.New("Not enough master ssh hosts.")
+	ErrConvergeInterrupted = errors.New("Interrupted.")
 )
 
 type Runner struct {
@@ -338,16 +337,23 @@ func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupG
 	}
 
 	if c.client.SSHClient != nil {
-		availableHosts := c.client.SSHClient.Settings.AvailableHosts()
-		if len(availableHosts) != len(c.nodeExternalIPs) {
-			msg := fmt.Sprintf(`Warning! Not enough master ssh hosts.
-If you will lost connection to master converge may not be finished.
-Do you want continue with next hosts:
-%v
-?
-`, availableHosts)
-			if !input.NewConfirmation().WithMessage(msg).Ask() {
-				return nil, ErrNotEnoughMastersSSHHosts
+		userPassedHosts := c.client.SSHClient.Settings.AvailableHosts()
+		setFromState, err := ssh.CheckSSHHosts(userPassedHosts, c.nodeExternalIPs, func(msg string) bool {
+			return input.NewConfirmation().WithMessage(msg).Ask()
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		if setFromState {
+			hostnames := maputils.Values(c.nodeExternalIPs)
+			foundCurrentHostInNew := c.client.SSHClient.Settings.ReplaceAvailableHosts(hostnames)
+			if !foundCurrentHostInNew {
+				err := c.client.KubeProxy.Restart()
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -647,7 +653,7 @@ func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) erro
 		})
 
 		if err != nil {
-			if errors.Is(err, ErrNotEnoughMastersSSHHosts) {
+			if errors.Is(err, ssh.ErrNotEnoughMastersSSHHosts) {
 				return err
 			}
 
