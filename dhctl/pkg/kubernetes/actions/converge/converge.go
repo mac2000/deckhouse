@@ -350,10 +350,13 @@ func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupG
 			hostnames := maputils.Values(c.nodeExternalIPs)
 			foundCurrentHostInNew := c.client.SSHClient.Settings.ReplaceAvailableHosts(hostnames)
 			if !foundCurrentHostInNew {
+				log.InfoF("Need to restart kube proxy with new host %s ...\n", c.client.SSHClient.Settings.Host())
 				err := c.client.KubeProxy.Restart()
 				if err != nil {
 					return nil, err
 				}
+
+				log.InfoLn("Proxy was restarted")
 			}
 		}
 	}
