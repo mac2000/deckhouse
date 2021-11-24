@@ -81,7 +81,7 @@ func NewInitClientFromFlags(askPassword bool) (*Client, error) {
 }
 
 func CheckSSHHosts(userPassedHosts []string, nodesToCheck map[string]string, runConfirm func(string) bool) (bool, error) {
-	var nodesForOutput []string
+	nodesForOutput := make([]string, 0)
 	knownHosts := make(map[string]struct{})
 
 	for nodeName, host := range nodesToCheck {
@@ -92,11 +92,12 @@ func CheckSSHHosts(userPassedHosts []string, nodesToCheck map[string]string, run
 
 	msg := ""
 
-	if len(userPassedHosts) < len(nodesToCheck) {
-		msg = fmt.Sprintf("Not enough master ssh hosts.")
-	} else if len(userPassedHosts) > len(nodesToCheck) {
+	switch {
+	case len(userPassedHosts) < len(nodesToCheck):
+		msg = "Not enough master ssh hosts."
+	case len(userPassedHosts) > len(nodesToCheck):
 		msg = "Too enough master ssh hosts. Maybe you want to delete nodes, but pass hosts for delete via ssh-host?"
-	} else {
+	default:
 		var notKnownHosts []string
 		for _, host := range userPassedHosts {
 			if _, ok := knownHosts[host]; !ok {

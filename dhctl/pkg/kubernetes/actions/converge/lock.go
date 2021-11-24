@@ -17,13 +17,13 @@ package converge
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	statecache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -96,9 +96,9 @@ func GetLockLeaseConfig(identity string) *client.LeaseLockConfig {
 	additionalInfo := ""
 	if app.SSHUser != "" {
 		info := struct {
-			SshUser string `json:"ssh_user,omitempty"`
+			SSHUser string `json:"ssh_user,omitempty"`
 		}{
-			SshUser: app.SSHUser,
+			SSHUser: app.SSHUser,
 		}
 
 		infoStr, err := json.Marshal(info)

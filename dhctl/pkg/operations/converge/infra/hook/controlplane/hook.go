@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package control_plane
+package controlplane
 
 import (
 	"context"
@@ -38,7 +38,6 @@ type Hook struct {
 	sourceCommandName string
 	kubeCl            *client.KubernetesClient
 	nodeToConverge    string
-	visitedNodes      map[string]struct{}
 	runAfterAction    bool
 }
 

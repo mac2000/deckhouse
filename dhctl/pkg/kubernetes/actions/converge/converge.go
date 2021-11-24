@@ -25,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/control_plane"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
@@ -363,7 +363,7 @@ func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupG
 
 	nodesToCheck := maputils.ExcludeKeys(c.nodeExternalIPs, convergedNode)
 
-	h := control_plane.NewHook(c.client, nodesToCheck, c.config.UUID).
+	h := controlplane.NewHook(c.client, nodesToCheck, c.config.UUID).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode)
 
@@ -600,7 +600,6 @@ func (c *NodeGroupController) tryDeleteNodes(deleteNodesNames map[string][]byte,
 		if noQuorum && !confirm.Ask() {
 			return fmt.Errorf("Skip delete master nodes")
 		}
-
 	}
 
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", c.name, nodeGroup.DesiredReplicas)
@@ -637,7 +636,6 @@ func (c *NodeGroupController) tryDeleteNodeGroup(nodeGroup *NodeGroupGroupOption
 	return log.Process("converge", fmt.Sprintf("Delete NodeGroup %s", c.name), func() error {
 		return DeleteNodeGroup(c.client, nodeGroup.Name)
 	})
-
 }
 
 func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) error {

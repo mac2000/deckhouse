@@ -16,11 +16,12 @@ package frontend
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/cmd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
-	"os"
 )
 
 type Agent struct {

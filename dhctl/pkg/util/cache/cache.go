@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutils"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -26,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutils"
 )
 
 // NewTempStateCache creates new cache instance in tmp directory

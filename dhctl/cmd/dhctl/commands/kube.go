@@ -19,14 +19,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/control_plane"
-
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -43,7 +42,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 			<-doneCh
 		})
 
-		checker := control_plane.NewKubeProxyChecker().
+		checker := controlplane.NewKubeProxyChecker().
 			WithLogResult(true).
 			WithAskPassword(true).
 			WithInitParams(client.AppKubernetesInitParams())

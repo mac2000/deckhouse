@@ -16,7 +16,6 @@ package cache
 
 import (
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutils"
 	"os"
 	"path/filepath"
 	"sync"
@@ -26,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutils"
 )
 
 var once sync.Once
