@@ -116,7 +116,7 @@ func Test_scheduler_cleaning(t *testing.T) {
 				pods: append(fakePods(4), snapshot.Pod{
 					Index:   "e",
 					Node:    named("node", 5),
-					Ready:      false,
+					Ready:   false,
 					Created: time.Now(),
 				}),
 				image:        image,

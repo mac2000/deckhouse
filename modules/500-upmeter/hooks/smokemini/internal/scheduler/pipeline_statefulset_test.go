@@ -127,7 +127,7 @@ func fakePods(n int) []snapshot.Pod {
 		pods[i] = snapshot.Pod{
 			Index:   index[i],
 			Node:    nodes[i],
-			Ready:      true,
+			Ready:   true,
 			Created: time.Now(),
 		}
 	}
@@ -140,7 +140,7 @@ func fakePod(i int) snapshot.Pod {
 	return snapshot.Pod{
 		Index:   index[i],
 		Node:    named("node", i),
-		Ready:      true,
+		Ready:   true,
 		Created: time.Now(),
 	}
 }
