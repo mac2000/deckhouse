@@ -78,7 +78,7 @@ func indexesForDeletion(pvcs []snapshot.PvcTermination, pods []snapshot.PodPhase
 	Xpods := podsIndexSet(pods)
 	Xpvcs := pvcsIndexSet(pvcs)
 
-	// Pending pod my fail to schedule due to PVC problem
+	// Pending Pod may fail to schedule due to a PVC problem
 	for _, pod := range pods {
 		if !pod.IsPending {
 			continue
@@ -86,20 +86,20 @@ func indexesForDeletion(pvcs []snapshot.PvcTermination, pods []snapshot.PodPhase
 		forDeletion.Add(pod.Index().String())
 	}
 
-	// Terminating PVC should make Pod delete
+	// Terminating PVC should make its Pod to delete
 	for _, pvc := range pvcs {
 		if !pvc.IsTerminating {
 			continue
 		}
 		x := pvc.Index().String()
 		if !Xpods.Has(x) {
-			// Avoid deleting not existing pod
+			// Avoid deleting not existing Pod
 			continue
 		}
 		forDeletion.Add(x)
 	}
 
-	// Absent (already terminated) PVC should make Pod delete
+	// Absent (already terminated) PVC should make its Pod to delete
 	for x := range Xpods {
 		if !Xpvcs.Has(x) {
 			// PVC might have been deleted
