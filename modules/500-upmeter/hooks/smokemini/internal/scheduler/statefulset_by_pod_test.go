@@ -20,8 +20,6 @@ import (
 	"testing"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
-
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 )
 
@@ -111,7 +109,7 @@ func Test_stsSelectorByPod_Select(t *testing.T) {
 			input: func() (State, []snapshot.Pod, bool) {
 				state := fakeState()
 				pods := fakePods(5)
-				pods[c].Phase = v1.PodPending
+				pods[c].Ready = false
 				pods[d].Created = time.Now().Add(-4*time.Minute - time.Millisecond)
 				return state, pods, false
 			},
@@ -122,7 +120,7 @@ func Test_stsSelectorByPod_Select(t *testing.T) {
 			input: func() (State, []snapshot.Pod, bool) {
 				state := fakeState()
 				pods := fakePods(5)
-				pods[c].Phase = v1.PodPending
+				pods[c].Ready = false
 				pods[c].Created = time.Now().Add(-time.Minute - time.Millisecond)
 				return state, pods, false
 			},

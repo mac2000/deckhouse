@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
-
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 )
@@ -49,9 +47,8 @@ func (s *selectByPod) Select(state State) (string, error) {
 	// upgrade). It can lead to infinitely pending pod.
 	pendingThreshold := time.Now().Add(-time.Minute)
 	for _, pod := range s.pods {
-		notRunning := pod.Phase != v1.PodRunning
 		tooLong := pod.Created.Before(pendingThreshold)
-		if notRunning && tooLong {
+		if !pod.Ready && tooLong {
 			return pod.Index, nil
 		}
 	}

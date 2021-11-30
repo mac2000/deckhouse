@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
@@ -128,7 +127,7 @@ func fakePods(n int) []snapshot.Pod {
 		pods[i] = snapshot.Pod{
 			Index:   index[i],
 			Node:    nodes[i],
-			Phase:   v1.PodRunning,
+			Ready:      true,
 			Created: time.Now(),
 		}
 	}
@@ -141,7 +140,7 @@ func fakePod(i int) snapshot.Pod {
 	return snapshot.Pod{
 		Index:   index[i],
 		Node:    named("node", i),
-		Phase:   v1.PodRunning,
+		Ready:      true,
 		Created: time.Now(),
 	}
 }
