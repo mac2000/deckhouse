@@ -33,8 +33,15 @@ var (
 
 // NewStatefulSetSelector creates statefulset choosing pipeline. The result returns ffrom the first
 // successful selection. If no selection occurs, the pipeline returns ErrSkip.
-func NewStatefulSetSelector(nodes []snapshot.Node, storageClass string, pods []snapshot.Pod, disruptionAllowed bool) IndexSelectorPipe {
+func NewStatefulSetSelector(
+	nodes []snapshot.Node,
+	storageClass string,
+	pvcs []snapshot.PvcTermination,
+	pods []snapshot.Pod,
+	disruptionAllowed bool,
+) IndexSelectorPipe {
 	xSel := IndexSelectorPipe{
+		&selectByPVC{pvcs: pvcs},
 		&selectByNode{nodes: nodes},
 		&selectByStorageClass{storageClass: storageClass},
 		&selectByPod{pods: pods, disruptionAllowed: disruptionAllowed},

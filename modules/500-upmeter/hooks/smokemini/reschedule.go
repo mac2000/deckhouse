@@ -100,6 +100,16 @@ var _ = sdk.RegisterFunc(
 				ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 				WaitForSynchronization:       pointer.BoolPtr(false),
 			},
+			{
+				Name:              "pvc",
+				ApiVersion:        "v1",
+				Kind:              "PersistentVolumeClaim",
+				NamespaceSelector: namespaceSelector,
+				LabelSelector:     labelSelector,
+				FilterFunc:        snapshot.NewPvcTermination,
+
+				ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			},
 		},
 	},
 	reschedule,
@@ -132,13 +142,14 @@ func reschedule(input *go_hook.HookInput) error {
 
 		nodes             = snapshot.ParseNodeSlice(input.Snapshots["nodes"])
 		pods              = snapshot.ParsePodSlice(input.Snapshots["pods"])
+		pvcs              = snapshot.ParsePvcTerminationSlice(input.Snapshots["pvc"])
 		disruptionAllowed = parseAllowedDisruption(input.Snapshots["pdb"])
 
 		logger = input.LogEntry
 	)
 
 	// Construct
-	stsSelector := scheduler.NewStatefulSetSelector(nodes, storageClass, pods, disruptionAllowed)
+	stsSelector := scheduler.NewStatefulSetSelector(nodes, storageClass, pvcs, pods, disruptionAllowed)
 	nodeSelector := scheduler.NewNodeSelector(state)
 	kubeCleaner := scheduler.NewCleaner(input.PatchCollector, logger, pods)
 	s := scheduler.New(stsSelector, nodeSelector, kubeCleaner, image, storageClass)
