@@ -224,3 +224,10 @@ func firstNonEmpty(xs ...string) string {
 	}
 	return ""
 }
+
+// smokeMiniEnabled returns true if smoke-mini is not disabled. This function is to avoid reversed
+// boolean naming.
+func smokeMiniEnabled(v *go_hook.PatchableValues) bool {
+	disabled := v.Get("upmeter.smokeMiniDisabled").Bool()
+	return !disabled
+}
