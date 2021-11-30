@@ -32,7 +32,7 @@ var (
 )
 
 // NewStatefulSetSelector creates statefulset choosing pipeline. The result returns ffrom the first
-// successfull selection. If no selection occurs, the pipeline returns ErrSkip.
+// successful selection. If no selection occurs, the pipeline returns ErrSkip.
 func NewStatefulSetSelector(nodes []snapshot.Node, storageClass string, pods []snapshot.Pod, disruptionAllowed bool) IndexSelectorPipe {
 	xSel := IndexSelectorPipe{
 		&selectByNode{nodes: nodes},
