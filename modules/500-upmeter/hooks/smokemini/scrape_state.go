@@ -39,7 +39,7 @@ var _ = sdk.RegisterFunc(
 				FilterFunc:        snapshot.NewStatefulSet,
 
 				ExecuteHookOnEvents:          pointer.BoolPtr(false),
-				// ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+				ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 				// WaitForSynchronization:       pointer.BoolPtr(false),
 			},
 		},
