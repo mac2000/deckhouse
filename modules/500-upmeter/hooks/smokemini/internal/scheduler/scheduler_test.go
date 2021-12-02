@@ -200,14 +200,6 @@ func (s *fakeIndexSelector) Select(_ State) (string, error) {
 	return s.index, nil
 }
 
-type fakeIndexErrorSelector struct {
-	err error
-}
-
-func (s *fakeIndexErrorSelector) Select(_ State) (string, error) {
-	return "", s.err
-}
-
 type noopNodeFilter struct{}
 
 func (f *noopNodeFilter) Filter(nodes []snapshot.Node, _ string) []snapshot.Node {
