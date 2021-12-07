@@ -26,7 +26,7 @@ import (
 func NewCleaner(patcher *object_patch.PatchCollector, logger *logrus.Entry, pods []snapshot.Pod) Cleaner {
 	return &kubeCleaner{
 		pods:       pods,
-		podDeleter: NewPodDeleter(patcher, logger),
+		podDeleter: NewPodDeleter(patcher, logger), // TODO delete or restore
 		pvcDeleter: newPersistentVolumeClaimDeleter(patcher, logger),
 		stsDeleter: newStatefulSetDeleter(patcher, logger),
 	}
@@ -68,14 +68,15 @@ func (c *kubeCleaner) Clean(x string, curSts, newSts *XState) {
 
 		deletePVC = storageClassChanged || zoneChanged
 
-		// We have to re-create the StatefulSet because `volumeClaimTemplates` field is read-only and
-		// kube-apiserver will not accept the update
-		deleteSTS = storageClassChanged
-
-		// - If nothing changed for the StatefulSet and PVC, we should not tolerate failing pod.
-		// - If something changed while the pod is not running, we should take care of the pod specifically.
-		//   See https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#forced-rollback
-		deletePod = deleteSTS || deletePVC || (podExists && !pod.Ready)
+		// We have to re-create the StatefulSet because
+		//  - `volumeClaimTemplates` field is read-only and kube-apiserver will not accept the update;
+		//  - if nothing changed for the StatefulSet and PVC, we should not tolerate failing pod [1];
+		//  - if something changed while the pod is not running, we should take care of the pod specifically [1],
+		//    see https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#forced-rollback
+		//
+		//  [1] We cannot just delete the pod. If we do, kube controller manager can re-create it before statefulset
+		//      will be updated by Helm. So we avoid the race by re-creating the StatefulSet comlletely.
+		deleteSTS = storageClassChanged || deletePVC || (podExists && !pod.Ready)
 	)
 
 	if deleteSTS {
@@ -86,7 +87,4 @@ func (c *kubeCleaner) Clean(x string, curSts, newSts *XState) {
 		c.pvcDeleter.Delete(snapshot.Index(x).PersistenceVolumeClaimName())
 	}
 
-	if deletePod {
-		c.podDeleter.Delete(snapshot.Index(x).PodName())
-	}
 }
