@@ -29,11 +29,7 @@ spec:
               properties:
                 type:
                   type: string
-                  enum: ["AlertManager"]
-                orgName:
-                  type: string
-                  default: "Main Org"
-                  description: Graphana organization name
+                  enum: ["prometheus-alertmanager"]
                 disableResolveMessage:
                   type: bool
                   default: false
@@ -52,11 +48,15 @@ spec:
                   auth:
                     type: object
                     description: 'Authorization properties.'
-                    required: 'basic'
+                    required:
+                    - basic
                     properties:
                       basic:
                         type: object
                         description: 'Basic authorization properties.'
+                        required:
+                        - username
+                        - password
                         properties:
                           username:
                             type: string
