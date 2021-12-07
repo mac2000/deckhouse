@@ -1,0 +1,70 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: grafanaalertschannel.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: prometheus
+    app: grafana
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: grafanaalertschannels
+    singular: grafanaalertschannel
+    kind: GrafanaAlertsChannel
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: The resource for addinging  alert notification channels to Graphana.
+          required: ['spec']
+          properties:
+            spec:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: ["AlertManager"]
+                orgName:
+                  type: string
+                  default: "Main Org"
+                  description: Graphana organization name
+                disableResolveMessage:
+                  type: bool
+                  default: false
+                  description: When true, this option disables the resolve message [OK] that is sent when the alerting state returns to false.
+                alertManager:
+                  type: object
+                  description: Alert manager settings
+                  required:
+                  - address
+                  properties:
+                  address:
+                    type: string
+                    x-examples: [ "http://alerts.mycompany.com", "https://alerts.company.com", "http://192.168.1.1" ]
+                    pattern: "^https?://[^\\s/$.?#].[^\\s]*$"
+                    description: 'URL of an external Alertmanager.'
+                  auth:
+                    type: object
+                    description: 'Authorization properties.'
+                    required: 'basic'
+                    properties:
+                      basic:
+                        type: object
+                        description: 'Basic authorization properties.'
+                        properties:
+                          username:
+                            type: string
+                          password:
+                            type: string
+                            format: password
+      additionalPrinterColumns:
+        - jsonPath: .spec.type
+          name: Type
+          description: 'Alerts channel type'
+          type: string
