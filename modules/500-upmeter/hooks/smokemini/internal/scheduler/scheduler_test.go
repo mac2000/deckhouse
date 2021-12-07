@@ -73,7 +73,7 @@ func Test_scheduler_cleaning(t *testing.T) {
 			asserter: deletedResourceAssertion{},
 		},
 		{
-			name: "deletes pvc, sts, and pod if storage class changed",
+			name: "deletes pvc and sts if storage class changed",
 			fields: fields{
 				indexSelector: &fakeIndexSelector{"a"},
 				nodeFilter:    &noopNodeFilter{},
@@ -85,10 +85,10 @@ func Test_scheduler_cleaning(t *testing.T) {
 				state: fakeStateInSingleZone(zone),
 				nodes: nodesInOneZone,
 			},
-			asserter: deletedResourceAssertion{x: "a", pod: true, sts: true, pvc: true},
+			asserter: deletedResourceAssertion{x: "a", sts: true, pvc: true},
 		},
 		{
-			name: "deletes pvc and pod if zone changed",
+			name: "deletes pvc and sts if zone changed",
 			fields: fields{
 				indexSelector: &fakeIndexSelector{"c"},
 				nodeFilter: &mockNodeFilter{nodes: []snapshot.Node{
@@ -106,10 +106,10 @@ func Test_scheduler_cleaning(t *testing.T) {
 					fakeNode(4), fakeNode(5),
 				},
 			},
-			asserter: deletedResourceAssertion{x: "c", pod: true, pvc: true},
+			asserter: deletedResourceAssertion{x: "c", sts: true, pvc: true},
 		},
 		{
-			name: "deletes pod if it is not running",
+			name: "deletes pvc and sts if it the pod is not running",
 			fields: fields{
 				indexSelector: &fakeIndexSelector{"e"},
 				nodeFilter:    &noopNodeFilter{},
@@ -126,16 +126,15 @@ func Test_scheduler_cleaning(t *testing.T) {
 				state: fakeStateInSingleZone(zone),
 				nodes: nodesInOneZone,
 			},
-			asserter: deletedResourceAssertion{x: "e", pod: true},
+			asserter: deletedResourceAssertion{x: "e", sts: true, pvc: true},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			kleaner := &kubeCleaner{
-				pods:       tt.fields.pods,
-				podDeleter: &fakeDeleter{},
-				pvcDeleter: &fakeDeleter{},
-				stsDeleter: &fakeDeleter{},
+				pods:                          tt.fields.pods,
+				persistenceVolumeClaimDeleter: &fakeDeleter{},
+				statefulSetDeleter:            &fakeDeleter{},
 			}
 			s := &Scheduler{
 				indexSelector: tt.fields.indexSelector,
@@ -151,22 +150,16 @@ func Test_scheduler_cleaning(t *testing.T) {
 }
 
 type deletedResourceAssertion struct {
-	x             string
-	pod, sts, pvc bool
+	x   string
+	sts bool
+	pvc bool
 }
 
 func (a deletedResourceAssertion) Assert(t *testing.T, cc *kubeCleaner) {
-	pvcs := cc.pvcDeleter.(*fakeDeleter).names
-	pods := cc.podDeleter.(*fakeDeleter).names
-	sts := cc.stsDeleter.(*fakeDeleter).names
+	pvcs := cc.persistenceVolumeClaimDeleter.(*fakeDeleter).names
+	sts := cc.statefulSetDeleter.(*fakeDeleter).names
 
 	x := snapshot.Index(a.x)
-
-	if a.pod {
-		assert.True(t, pods.Has(x.PodName()), "Pod should be deleted")
-	} else {
-		assert.False(t, pods.Has(x.PodName()), "Pod should not be deleted")
-	}
 
 	if a.pvc {
 		assert.True(t, pvcs.Has(x.PersistenceVolumeClaimName()), "PVC should be deleted")
