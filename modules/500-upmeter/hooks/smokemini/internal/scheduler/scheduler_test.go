@@ -128,6 +128,26 @@ func Test_scheduler_cleaning(t *testing.T) {
 			},
 			asserter: deletedResourceAssertion{x: "e", sts: true, pvc: true},
 		},
+		{
+			name: `does not delete pvc if smoke-mini storage class is "false"`,
+			fields: fields{
+				indexSelector: &fakeIndexSelector{"e"},
+				nodeFilter:    &noopNodeFilter{},
+				pods: append(fakePods(4), snapshot.Pod{
+					Index:   "e",
+					Node:    named("node", 5),
+					Ready:   false,
+					Created: time.Now(),
+				}),
+				image:        image,
+				storageClass: "false",
+			},
+			args: args{
+				state: withDefaultStorageClass(fakeStateInSingleZone(zone)),
+				nodes: nodesInOneZone,
+			},
+			asserter: deletedResourceAssertion{x: "e", sts: true, pvc: false },
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

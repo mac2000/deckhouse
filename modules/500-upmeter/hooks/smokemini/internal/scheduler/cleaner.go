@@ -75,8 +75,15 @@ func (c *kubeCleaner) Clean(x string, curSts, newSts *XState) {
 		shouldClean = storageClassChanged || zoneChanged || (podExists && !pod.Ready)
 	)
 
-	if shouldClean {
-		c.persistenceVolumeClaimDeleter.Delete(snapshot.Index(x).PersistenceVolumeClaimName())
-		c.statefulSetDeleter.Delete(snapshot.Index(x).StatefulSetName())
+	if !shouldClean {
+		return
 	}
+
+	if curSts.StorageClass != snapshot.DefaultStorageClass {
+		// If we use emptyDir, we don't have PVC
+		c.persistenceVolumeClaimDeleter.Delete(snapshot.Index(x).PersistenceVolumeClaimName())
+	}
+
+	c.statefulSetDeleter.Delete(snapshot.Index(x).StatefulSetName())
+
 }

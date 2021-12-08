@@ -99,6 +99,12 @@ func fakeStateInSingleZone(zone string) State {
 	return state
 }
 
+func withDefaultStorageClass(s State) State {
+	for _, xs := range s {
+		xs.StorageClass = snapshot.DefaultStorageClass
+	}
+	return s
+}
 func fakeState() State {
 	state := newState()
 
