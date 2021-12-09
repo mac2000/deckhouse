@@ -22,9 +22,9 @@ spec:
           type: object
           required: ["spec"]
           description: |
-            CustomResource for storage in log-pipeline.
+            Describes setting for a storage in log-pipeline.
 
-            Each CR `ClusterLogDestination` descride one log storage, which you can use in many log sources.
+            Each CR `ClusterLogDestination` describes one log storage, which you can use in many log sources.
 
             `metadata.name` — is an upstream name, whick you should use in CR `ClusterLoggingConfig`.
           properties:
@@ -59,7 +59,7 @@ spec:
                 type:
                   type: string
                   enum: ["Loki", "Elasticsearch", "Logstash"]
-                  description: Set on of possible output destinations.
+                  description: Type of a log storage backend.
                 loki:
                   type: object
                   required:
@@ -71,7 +71,7 @@ spec:
                         password:
                           type: string
                           format: password
-                          description: Base64 encoded basic authentication password.
+                          description: Base64 encoded Basic authentication password.
                         strategy:
                           type: string
                           enum: ["Basic", "Bearer"]
@@ -79,10 +79,10 @@ spec:
                           description: The authentication strategy to use.
                         token:
                           type: string
-                          description: The token to use for bearer authentication.
+                          description: The token to use for Bearer authentication.
                         user:
                           type: string
-                          description: The basic authentication user name.
+                          description: The Basic authentication user name.
                       oneOf:
                         - properties:
                             strategy:
@@ -112,7 +112,7 @@ spec:
                       description: |
                         The base URL of the Loki instance.
 
-                        *HINT* Vector automatically adds `/loki/api/v1/push` into URL during data transmission.
+                        > Vector automatically adds `/loki/api/v1/push` into URL during data transmission.
                     tls:
                       type: object
                       description: Configures the TLS options for outgoing connections.
@@ -129,11 +129,17 @@ spec:
                           properties:
                             crtFile:
                               type: string
-                              description: Base64 encoded certificate in PEM format. keyFile Must also be set.
+                              description: |
+                                Base64 encoded certificate in PEM format.
+
+                                You must also set the `keyFile` parameter.
                             keyFile:
                               type: string
                               format: password
-                              description: Base64 encoded private key in PEM format (PKCS#8). If this is set, crtFile must also be set.
+                              description: |
+                                Base64 encoded private key in PEM format (PKCS#8).
+
+                                You must also set the `crtFile` parameter.
                             keyPass:
                               type: string
                               format: string
@@ -158,22 +164,22 @@ spec:
                         password:
                           type: string
                           format: password
-                          description: Base64 encoded basic authentication password.
+                          description: Base64 encoded Basic authentication password.
                         awsAccessKey:
                           type: string
-                          description: Base64 encoded AWS ACCESS_KEY.
+                          description: Base64 encoded AWS `ACCESS_KEY`.
                         awsSecretKey:
                           type: string
-                          description: Base64 encoded AWS SECRET_KEY.
+                          description: Base64 encoded AWS `SECRET_KEY`.
                         awsAssumeRole:
                           type: string
                           description: The ARN of an IAM role to assume at startup.
                         user:
                           type: string
-                          description: The basic authentication user name.
+                          description: The Basic authentication user name.
                         awsRegion:
                           type: string
-                          description: AWS region for aws authentication.
+                          description: AWS region for authentication.
                       oneOf:
                         - properties:
                             strategy:
@@ -230,11 +236,17 @@ spec:
                           properties:
                             crtFile:
                               type: string
-                              description: Base64 encoded certificate in PEM format. keyFile Must also be set.
+                              description: |
+                                Base64 encoded certificate in PEM format.
+
+                                You must also set the `keyFile` parameter.
                             keyFile:
                               type: string
                               format: password
-                              description: Base64 encoded private key in PEM format (PKCS#8). If this is set, crtFile must also be set.
+                              description: |
+                                Base64 encoded private key in PEM format (PKCS#8).
+
+                                You must also set the `crtFile` parameter.
                             keyPass:
                               type: string
                               format: string
@@ -267,11 +279,17 @@ spec:
                           properties:
                             crtFile:
                               type: string
-                              description: Base64 encoded certificate in PEM format. keyFile Must also be set.
+                              description: |
+                                Base64 encoded certificate in PEM format.
+
+                                You must also set the `keyFile` parameter.
                             keyFile:
                               type: string
                               format: password
-                              description: Base64 encoded private key in PEM format (PKCS#8). If this is set, crtFile must also be set.
+                              description: |
+                                Base64 encoded private key in PEM format (PKCS#8).
+
+                                You must also set the `crtFile` parameter.
                             keyPass:
                               type: string
                               format: string
@@ -288,7 +306,9 @@ spec:
                   type: object
                   description: |
                     A set of labels that will be attached to each batch of events.
+
                     You can use simple templating here: `{{ app }}`.
+
                     There are some reserved keys:
                     - parsed_data
                     - pod
@@ -299,7 +319,8 @@ spec:
                     - container
                     - node
                     - pod_owner
-                    More about [field path notation](https://vector.dev/docs/reference/configuration/field-path-notation/)
+
+                    [More about field path notation...](https://vector.dev/docs/reference/configuration/field-path-notation/)
                   example: |
                     ```yaml
                     extraLabels:
