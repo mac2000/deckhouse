@@ -146,7 +146,7 @@ func Test_scheduler_cleaning(t *testing.T) {
 				state: withDefaultStorageClass(fakeStateInSingleZone(zone)),
 				nodes: nodesInOneZone,
 			},
-			asserter: deletedResourceAssertion{x: "e", sts: true, pvc: false },
+			asserter: deletedResourceAssertion{x: "e", sts: true, pvc: false},
 		},
 	}
 	for _, tt := range tests {

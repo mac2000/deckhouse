@@ -120,7 +120,7 @@ func reschedule(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	var logger = input.LogEntry
+	logger := input.LogEntry
 	const statePath = "upmeter.internal.smokeMini.sts"
 
 	// Parse the state from values

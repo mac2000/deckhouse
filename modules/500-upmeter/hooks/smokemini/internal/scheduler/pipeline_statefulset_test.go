@@ -105,6 +105,7 @@ func withDefaultStorageClass(s State) State {
 	}
 	return s
 }
+
 func fakeState() State {
 	state := newState()
 

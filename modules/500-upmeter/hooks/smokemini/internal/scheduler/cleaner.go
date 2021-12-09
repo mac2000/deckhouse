@@ -85,5 +85,4 @@ func (c *kubeCleaner) Clean(x string, curSts, newSts *XState) {
 	}
 
 	c.statefulSetDeleter.Delete(snapshot.Index(x).StatefulSetName())
-
 }
