@@ -1,0 +1,13 @@
+istio:
+  features:
+    - description: Great module refactoring
+      pull_request: https://github.com/deckhouse/deckhouse/pull/357
+upmeter:
+  features:
+    - description: Assign more specific nodes for the server pod
+      pull_request: https://github.com/deckhouse/deckhouse/pull/351
+user-authn:
+  features:
+    - description: Add the doc about Dex rate limit
+      pull_request: https://github.com/deckhouse/deckhouse/pull/352
+
